@@ -3,24 +3,23 @@
     <head>
         <meta name="description" content="HTML5 Audio Spectrum Visualizer">
         <title>HTML5 Audio API showcase | Audio visualizer</title>
-        <link type="text/css" rel="stylesheet" href="style/style.css">
+        <link type="text/css" rel="stylesheet" href="css/index.css">
     </head>
+
     <body>
-        <div id="wrapper">
-            <div id="fileWrapper" class="file_wrapper">
-                <div id="info">
-                    HTML5 Audio API showcase | An Audio Viusalizer
-                </div>
-                <label for="uploadedFile">Drag&drop or select a file to play:</label>
-                <input type="file" id="uploadedFile"></input>
+        <div id="dragzone">
+            <div class="cover"></div>
+            <div class="hint">
+                Drag music here
             </div>
-            <div id="visualizer_wrapper">
-                <canvas id='canvas' width="800" height="350"></canvas>
-            </div>
+            <input type="file" id="selected-file"></input>
         </div>
-        <footer>
-            <small>Star me on <a href="https://github.com/Wayou/HTML5_Audio_Visualizer"  target="_blank">GitHub</a></small>
-        </footer>
-        <script type="text/javascript" src="js/html5_audio_visualizer.js"></script>
+
+        <div id="visualizer_wrapper">
+            <canvas id='visualizer' width="800" height="350"></canvas>
+        </div>
+
+        <script type="text/javascript" src="js/jquery-2.1.3.min.js"></script>
+        <script type="text/javascript" src="js/index.js"></script>
     </body>
 </html>
