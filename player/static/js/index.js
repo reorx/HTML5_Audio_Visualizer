@@ -9,7 +9,7 @@
  */
 
 $(function() {
-    var visualizer = window.visualizer = new AudioVisualizer($('#visualizer'));
+    var visualizer = window.visualizer = new AudioVisualizer($('#visualizer canvas'));
 
     if (!visualizer.audio_context) {
         alert('Your browser does not support audio_context');
@@ -19,6 +19,11 @@ $(function() {
     var dragzone = new Dragzone($('#dragzone'));
     dragzone.init(visualizer);
 });
+
+
+Uint8Array.max = function( array ){
+    return Math.max.apply( Math, array );
+};
 
 
 var Dragzone = function(el) {
@@ -123,6 +128,7 @@ AudioVisualizer.prototype = {
     },
 
     feed: function(file) {
+        console.log('file', file);
         this.file = file;
         if (this.audio_source !== null)
             this.audio_source.stop(0);
@@ -198,23 +204,31 @@ AudioVisualizer.prototype = {
         var _this = this,
             canvas = this.$canvas[0],
             canvas_width = canvas.width,
-            canvas_height = canvas.height - 2,
-            meter_width = 10, //width of the meters in the spectrum
-            meter_gap = 2, //gap between meters
-            meter_num = 800 / (10 + 2), //count of the meters
-            cap_height = 2,
+            canvas_height = canvas.height,
+            canvas_height_half = canvas.height / 2,
+            // value is about 0 to 200 much, so we suggest 300 is the limit of value
+            value_limit = 300,
+            meter_width = 7,
+            meter_gap = 1,
+            unit_width = meter_width + meter_gap,
+            meter_num = canvas_width / unit_width,
+            i;
+        console.log('unit_width', unit_width, ', meter_num', meter_num);
+
+        /*
+        var cap_height = 2,
             cap_style = '#fff',
             cap_y_pos_list = [], ////store the vertical position of hte caps for the preivous frame
-            all_caps_reach_bottom,
-            i;
+            all_caps_reach_bottom;
+        */
 
         ctx = canvas.getContext('2d');
         gradient = ctx.createLinearGradient(0, 0, 0, 300);
-        gradient.addColorStop(0, '#f00');  // Top: red
-        gradient.addColorStop(0.5, '#ff0');  // Middle: yellow
-        gradient.addColorStop(1, '#0f0');  // Bottom: green
+        gradient.addColorStop(0, '#fff');  // Top
+        // gradient.addColorStop(0.5, '#ff0');  // Middle
+        gradient.addColorStop(1, '#99EDFF');  // Bottom
 
-        var draw_meter = function() {
+        var draw_meters = function() {
             var stream = new Uint8Array(analyser.frequencyBinCount);
             // Fill the Uint8Array with data returned from getByteFrequencyData()
             analyser.getByteFrequencyData(stream);
@@ -235,12 +249,21 @@ AudioVisualizer.prototype = {
                     return;
                 }
             }
+
             // Sample limited data from the total stream
             var step = Math.round(stream.length / meter_num);
+
             ctx.clearRect(0, 0, canvas_width, canvas_height);
 
             for (i = 0; i < meter_num; i++) {
                 var value = stream[i * step];
+                if (value > value_limit)
+                    value = value_limit;
+
+                var rect_y = (1 - value / value_limit) * canvas_height_half,
+                    rect_height = canvas_height - 2 * rect_y;
+
+                /*
                 if (cap_y_pos_list.length < Math.round(meter_num)) {
                     cap_y_pos_list.push(value);
                 }
@@ -252,12 +275,109 @@ AudioVisualizer.prototype = {
                     ctx.fillRect(i * 12, canvas_height - value, meter_width, cap_height);
                     cap_y_pos_list[i] = value;
                 }
+                */
+
                 // Set the filllStyle to gradient for a better look
                 ctx.fillStyle = gradient;
-                ctx.fillRect(i * 12 /*meter_width+meter_gap*/ , canvas_height - value + cap_height, meter_width, canvas_height); //the meter
+                ctx.fillRect(
+                    i * unit_width, rect_y,
+                    meter_width, rect_height);
             }
-            _this.animation_id = requestAnimationFrame(draw_meter);
+
+            /*
+            _this.animation_id = setTimeout(function() {
+                requestAnimationFrame(draw_meters);
+            }, 500);
+            */
+            requestAnimationFrame(draw_meters);
         };
-        this.animation_id = requestAnimationFrame(draw_meter);
+        this.animation_id = requestAnimationFrame(draw_meters);
+    },
+
+    draw_symmetry_spectrum: function(analyser) {
+        var _this = this,
+            canvas = this.$canvas[0],
+            canvas_width = canvas.width,
+            canvas_height = canvas.height,
+            canvas_height_half = canvas.height / 2,
+            // value is about 0 to 200 much, so we suggest 300 is the limit of value
+            value_limit = 300,
+            meter_width = 7,
+            meter_gap = 1,
+            unit_width = meter_width + meter_gap,
+            meter_num = canvas_width / unit_width,
+            i;
+        console.log('unit_width', unit_width, ', meter_num', meter_num);
+
+        ctx = canvas.getContext('2d');
+        gradient = ctx.createLinearGradient(0, 0, 0, 300);
+        gradient.addColorStop(0, '#fff');  // Top
+        // gradient.addColorStop(0.5, '#ff0');  // Middle
+        gradient.addColorStop(1, '#99EDFF');  // Bottom
+
+        var draw_meters = function() {
+            var stream = new Uint8Array(analyser.frequencyBinCount);
+            // Fill the Uint8Array with data returned from getByteFrequencyData()
+            analyser.getByteFrequencyData(stream);
+
+            if (_this.status === 0) {
+                // Fix when some sounds end the value still not back to zero
+                for (i = stream.length - 1; i >= 0; i--) {
+                    stream[i] = 0;
+                }
+                all_caps_reach_bottom = true;
+                for (i = cap_y_pos_list.length - 1; i >= 0; i--) {
+                    all_caps_reach_bottom = all_caps_reach_bottom && (cap_y_pos_list[i] === 0);
+                }
+                if (all_caps_reach_bottom) {
+                    // Since the sound is stoped and animation finished,
+                    // stop the requestAnimation to prevent potential memory leak, THIS IS VERY IMPORTANT!
+                    cancelAnimationFrame(_this.animation_id);
+                    return;
+                }
+            }
+
+            // Sample limited data from the total stream
+            var step = Math.round(stream.length / meter_num);
+
+            ctx.clearRect(0, 0, canvas_width, canvas_height);
+
+            for (i = 0; i < meter_num; i++) {
+                var value = stream[i * step];
+                if (value > value_limit)
+                    value = value_limit;
+
+                var rect_y = (1 - value / value_limit) * canvas_height_half,
+                    rect_height = canvas_height - 2 * rect_y;
+
+                /*
+                if (cap_y_pos_list.length < Math.round(meter_num)) {
+                    cap_y_pos_list.push(value);
+                }
+                ctx.fillStyle = cap_style;
+                // Draw the cap, with transition effect
+                if (value < cap_y_pos_list[i]) {
+                    ctx.fillRect(i * 12, canvas_height - (--cap_y_pos_list[i]), meter_width, cap_height);
+                } else {
+                    ctx.fillRect(i * 12, canvas_height - value, meter_width, cap_height);
+                    cap_y_pos_list[i] = value;
+                }
+                */
+
+                // Set the filllStyle to gradient for a better look
+                ctx.fillStyle = gradient;
+                ctx.fillRect(
+                    i * unit_width, rect_y,
+                    meter_width, rect_height);
+            }
+
+            /*
+            _this.animation_id = setTimeout(function() {
+                requestAnimationFrame(draw_meters);
+            }, 500);
+            */
+            requestAnimationFrame(draw_meters);
+        };
+        this.animation_id = requestAnimationFrame(draw_meters);
     },
 };

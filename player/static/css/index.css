@@ -15,6 +15,7 @@ body {
     right: 15%;
     top: 15%;
     bottom: 15%;
+    z-index: 2;
 
     border-width: 4px;
     border-style: dashed;
@@ -47,11 +48,13 @@ body {
     display: none;
 }
 
-#visualizer_wrapper{
-	text-align: center;
-}
-footer{
-	position: fixed;
-	bottom: 2px;
-	color:#aaa;
+#visualizer {
+    border: 1px solid #aaa;
+    width: 800px;
+    height: 300px;
+    position: absolute;
+    left: 50%;
+    margin-left: -400px;
+    bottom: 15px;
+    z-index: 1;
 }
