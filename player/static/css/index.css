@@ -2,11 +2,14 @@ html, body {
     margin: 0;
     height: 100%;
     font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif;
+    background: url('/static/img/night-sky.jpg');
+    background-size: cover;
 }
 
 body {
     color: #333;
     position: relative;
+    padding-top: 1px;
 }
 
 #dragzone {
@@ -49,12 +52,51 @@ body {
 }
 
 #visualizer {
-    border: 1px solid #aaa;
+    position: absolute;
+    /*
+    */
     width: 800px;
     height: 300px;
-    position: absolute;
     left: 50%;
     margin-left: -400px;
-    bottom: 15px;
+    bottom: 50px;
+    /*
+    height: 300px;
+    left: 0;
+    right: 0;
+    top: 50%;
+    margin-top: -150px;
+    */
     z-index: 1;
+    /*border-bottom: 2px solid #4679FF;*/
+}
+
+#visualizer > canvas {
+    width: 100%;
+    height: 100%;
+}
+
+.song-info {
+    margin: 0 auto;
+    margin-top: 110px;
+}
+.song-info .title {
+    text-align: center;
+    color: rgba(255, 255, 255, 0.7);
+    font-size: 35px;
+    font-family: "Microsoft YaHei", "微软雅黑", STXihei, "华文细黑", serif;
+    letter-spacing: 3px;
+    transition: all 0.3s ease;
+    margin-bottom: 20px;
+}
+.song-info .title:hover,
+.song-info .words:hover {
+    color: rgba(255, 255, 255, 1);
+}
+.song-info .words {
+    text-align: center;
+    font-size: 14px;
+    color: rgba(255, 255, 255, 0.8);
+    line-height: 30px;
+    transition: all 0.3s ease;
 }

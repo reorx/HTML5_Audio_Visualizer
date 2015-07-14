@@ -8,17 +8,57 @@
  * view online demo:http://wayou.github.io/HTML5_Audio_AudioVisualizer/
  */
 
-$(function() {
-    var visualizer = window.visualizer = new AudioVisualizer($('#visualizer canvas'));
 
+var SONG_IDS = [
+    '25706282',
+    '286959',
+    '385781',
+    '27203574',
+];
+
+
+$(function() {
+    $.ajax({
+        url: '/api/songs',
+        data: {'ids': SONG_IDS}
+    }).then(function(json) {
+        console.log(json);
+        var song = json.data[0];
+        $('.song-info .title').html(song.name);
+        play_url(song.mp3Url);
+    });
+
+    var dragzone = new Dragzone($('#dragzone'));
+    dragzone.init(visualizer);
+});
+
+var CODER;
+
+var play_url = function(url) {
+    var core = $('#_player').contents().find('body');
+    core.append($('<audio>').attr('type', 'audio/mp3').attr('src', url).addClass('coder'))
+        .append($('<audio>').addClass('next'));
+    var coder = CODER = core.find('.coder').get(0);
+    console.log('coder', coder);
+    // coder.src = url;
+
+    var ctx = new AudioContext();
+    var audioSrc = ctx.createMediaElementSource(coder);
+    var analyser = ctx.createAnalyser();
+    audioSrc.connect(analyser);
+    analyser.connect(ctx.destination);
+
+
+    var visualizer = window.visualizer = new AudioVisualizer($('#visualizer canvas'));
     if (!visualizer.audio_context) {
         alert('Your browser does not support audio_context');
         return;
     }
 
-    var dragzone = new Dragzone($('#dragzone'));
-    dragzone.init(visualizer);
-});
+    // coder.load();
+    coder.play();
+    visualizer.draw_symmetry_spectrum(analyser);
+};
 
 
 Uint8Array.max = function( array ){
@@ -297,9 +337,9 @@ AudioVisualizer.prototype = {
     draw_symmetry_spectrum: function(analyser) {
         var _this = this,
             canvas = this.$canvas[0],
-            canvas_width = canvas.width,
-            canvas_height = canvas.height,
-            canvas_height_half = canvas.height / 2,
+            canvas_width = this.$canvas.width(),
+            canvas_height = this.$canvas.height(),
+            canvas_height_half = canvas_height / 2,
             // value is about 0 to 200 much, so we suggest 300 is the limit of value
             value_limit = 300,
             meter_width = 7,
@@ -307,19 +347,21 @@ AudioVisualizer.prototype = {
             unit_width = meter_width + meter_gap,
             meter_num = canvas_width / unit_width,
             i;
-        console.log('unit_width', unit_width, ', meter_num', meter_num);
+        console.log('canvas', canvas_width, canvas_height, 'unit_width', unit_width, ', meter_num', meter_num);
 
         ctx = canvas.getContext('2d');
         gradient = ctx.createLinearGradient(0, 0, 0, 300);
-        gradient.addColorStop(0, '#fff');  // Top
-        // gradient.addColorStop(0.5, '#ff0');  // Middle
-        gradient.addColorStop(1, '#99EDFF');  // Bottom
+        gradient.addColorStop(0, 'rgba(255, 250, 140, 0.3)');  // Top
+        gradient.addColorStop(0.5, 'rgba(255, 250, 140, 0.9)');  // Middle
+        // gradient.addColorStop(0.5, 'rgba(255, 254, 34, 0.7)');  // Middle
+        gradient.addColorStop(1, 'rgba(255, 250, 140, 0.3)');  // Bottom
 
         var draw_meters = function() {
             var stream = new Uint8Array(analyser.frequencyBinCount);
             // Fill the Uint8Array with data returned from getByteFrequencyData()
             analyser.getByteFrequencyData(stream);
 
+            /*
             if (_this.status === 0) {
                 // Fix when some sounds end the value still not back to zero
                 for (i = stream.length - 1; i >= 0; i--) {
@@ -336,6 +378,7 @@ AudioVisualizer.prototype = {
                     return;
                 }
             }
+            */
 
             // Sample limited data from the total stream
             var step = Math.round(stream.length / meter_num);
